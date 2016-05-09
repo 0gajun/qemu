@@ -2019,6 +2019,21 @@ static void fdctrl_write_data(FDCtrl *fdctrl, uint32_t value)
     }
 
     FLOPPY_DPRINTF("%s: %02x\n", __func__, value);
+
+    /* OGA: 2016/5/9 BUG!
+     * Researching VENOM vulnerbility...
+     *
+     * Following codes are for command state.
+     * However, even if fdc is in the execution state,
+     * following codes are executed when current command is READ_ID.
+     * (Because this implementation doesn't consider fdc states)
+     *
+     * So, there was a vulnerbility.
+     *
+     * In other data transfer commands, FD_MSR_NONDMA bit is active.
+     * So, in that case this path isn't executed.
+     */
+
     fdctrl->fifo[fdctrl->data_pos++] = value;
     if (fdctrl->data_pos == fdctrl->data_len) {
         /* We now have all parameters
