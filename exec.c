@@ -2347,6 +2347,7 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
                 default:
                     abort();
                 }
+                qemu_io_port_log(1, addr, val);
             } else {
                 addr1 += memory_region_get_ram_addr(mr);
                 /* RAM case */
@@ -2382,6 +2383,7 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
                 default:
                     abort();
                 }
+                qemu_io_port_log(0, addr, val);
             } else {
                 /* RAM case */
                 ptr = qemu_get_ram_ptr(mr->ram_addr + addr1);
