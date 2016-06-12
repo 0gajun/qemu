@@ -56,6 +56,8 @@
 
 #include "qemu/range.h"
 
+#include "qemu/io-logger.h"
+
 //#define DEBUG_SUBPAGE
 
 #if !defined(CONFIG_USER_ONLY)
@@ -2347,7 +2349,7 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
                 default:
                     abort();
                 }
-                qemu_io_port_log(1, addr, val);
+                qemu_io_port_log(true, addr, val);
             } else {
                 addr1 += memory_region_get_ram_addr(mr);
                 /* RAM case */
@@ -2383,7 +2385,7 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
                 default:
                     abort();
                 }
-                qemu_io_port_log(0, addr, val);
+                qemu_io_port_log(false, addr, val);
             } else {
                 /* RAM case */
                 ptr = qemu_get_ram_ptr(mr->ram_addr + addr1);

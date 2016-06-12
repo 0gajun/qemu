@@ -40,6 +40,8 @@
 
 #include "hw/boards.h"
 
+#include "qemu/io-logger.h"
+
 /* This check must be after config-host.h is included */
 #ifdef CONFIG_EVENTFD
 #include <sys/eventfd.h>
@@ -965,6 +967,8 @@ int kvm_set_irq(KVMState *s, int irq, int level)
     int ret;
 
     assert(kvm_async_interrupts_enabled());
+
+    qemu_irq_log(irq, level);
 
     event.level = level;
     event.irq = irq;

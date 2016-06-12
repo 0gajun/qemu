@@ -47,16 +47,6 @@ void qemu_log_mask(int mask, const char *fmt, ...)
     va_end(ap);
 }
 
-void qemu_io_port_log(int is_write, hwaddr port_addr, uint64_t val) {
-    if (0x03F0 <= port_addr && port_addr != 0x03F6 && port_addr <= 0x03F7) {
-      if (is_write) {
-          qemu_log("[io] w 0x%04x 0x%x\n", (unsigned int) port_addr, (unsigned int)val);
-      } else {
-          qemu_log("[io] r 0x%04x 0x%x\n", (unsigned int) port_addr, (unsigned int)val);
-      }
-    }
-}
-
 /* enable or disable low levels log */
 void do_qemu_set_log(int log_flags, bool use_own_buffers)
 {

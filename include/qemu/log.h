@@ -69,9 +69,6 @@ qemu_log_vprintf(const char *fmt, va_list va)
  */
 void GCC_FMT_ATTR(2, 3) qemu_log_mask(int mask, const char *fmt, ...);
 
-void qemu_io_port_log(int is_write, hwaddr port_addr, uint64_t val);
-
-
 /* Special cases: */
 
 /* cpu_dump_state() logging functions: */

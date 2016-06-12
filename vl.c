@@ -119,6 +119,7 @@ int main(int argc, char **argv)
 #include "qapi/opts-visitor.h"
 #include "qom/object_interfaces.h"
 #include "qapi-event.h"
+#include "qemu/io-logger.h"
 
 #define DEFAULT_RAM_SIZE 128
 
@@ -3830,6 +3831,8 @@ int main(int argc, char **argv, char **envp)
      * other one may be encountered later on the command line, changing the
      * location or level of logging.
      */
+
+    qemu_set_io_log_filename("io_log.log");
     if (log_mask) {
         int mask;
         if (log_file) {

@@ -40,7 +40,7 @@
 
 /********************************************************/
 /* debug Floppy devices */
-//#define DEBUG_FLOPPY
+#define DEBUG_FLOPPY
 
 #ifdef DEBUG_FLOPPY
 #define FLOPPY_DPRINTF(fmt, ...)                                \
@@ -895,7 +895,6 @@ static void fdctrl_raise_irq(FDCtrl *fdctrl)
     if (!(fdctrl->sra & FD_SRA_INTPEND)) {
         qemu_set_irq(fdctrl->irq, 1);
         fdctrl->sra |= FD_SRA_INTPEND;
-        qemu_log("[io] raise_irq\n");
     }
 
     fdctrl->reset_sensei = 0;
