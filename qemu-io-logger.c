@@ -21,68 +21,54 @@ static void qemu_io_log(const char *fmt, ...)
     va_end(ap);
 }
 
-static uint8_t read_msr(void)
+static void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
 {
-  hwaddr addr;
-  hwaddr len = 1; //Bytes = 8bit
-  bool error = false;
-  uint64_t val = 0;
-  uint8_t result;
-
-  MemoryRegion *mr = address_space_translate(&address_space_io,
-      MAIN_STATUS_REGISTER, &addr, &len, false);
-
-  error |= io_mem_read(mr, addr, &val, 1);
-
-  stb_p(&result, val);
-  return result;
-}
-
-static void qemu_fdc_status(char *buf, unsigned int len)
-{
-  unsigned int cur_len = 1;
+  int cur_len = 1;
   buf[0] = '\0';
 
-  uint8_t msr = read_msr();
+  snprintf(buf, len, "0x%x [", (unsigned int)msr);
+  cur_len = strnlen(buf, len);
 
   if (msr & MSR_RQM) {
-    strncat(buf, " RQM", len - cur_len);
+    strncat(buf, "RQM ", len - cur_len);
     cur_len += 4;
   }
   if (msr & MSR_DIO) {
-    strncat(buf, " DIO", len - cur_len);
+    strncat(buf, "DIO ", len - cur_len);
     cur_len += 4;
   }
   if (msr & MSR_NON_DMA) {
-    strncat(buf, " NON_DMA", len - cur_len);
+    strncat(buf, "NON_DMA ", len - cur_len);
     cur_len += 8;
   }
   if (msr & MSR_CMD_BSY) {
-    strncat(buf, " CMD_BSY", len - cur_len);
+    strncat(buf, "CMD_BSY ", len - cur_len);
     cur_len += 8;
   }
   if (msr & MSR_DRV0_BSY) {
-    strncat(buf, " DRV0_BSY", len - cur_len);
+    strncat(buf, "DRV0_BSY ", len - cur_len);
     cur_len += 9;
   }
   if (msr & MSR_DRV1_BSY) {
-    strncat(buf, " DRV1_BSY", len - cur_len);
+    strncat(buf, "DRV1_BSY ", len - cur_len);
     cur_len += 9;
   }
   if (msr & MSR_DRV2_BSY) {
-    strncat(buf, " DRV2_BSY", len - cur_len);
+    strncat(buf, "DRV2_BSY ", len - cur_len);
     cur_len += 9;
   }
   if (msr & MSR_DRV3_BSY) {
-    strncat(buf, " DRV3_BSY", len - cur_len);
+    strncat(buf, "DRV3_BSY ", len - cur_len);
     cur_len += 9;
   }
+  strncat(buf, "]", len - cur_len);
 }
 
 void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val) {
     if (0x03F0 <= port_addr && port_addr != 0x03F6 && port_addr <= 0x03F7) {
       char status[1024];
-      qemu_fdc_status(status, 1024);
+      status[0] = '\0';
+      if (!is_write && port_addr == 0x03F4) qemu_log_parse_msr_value(val, status, 1024);
 
       qemu_io_log("[io] %c 0x%04x 0x%x %s\n", (is_write ? 'w' : 'r'), (unsigned int) port_addr, (unsigned int)val, status);
 
