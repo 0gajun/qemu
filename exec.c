@@ -2329,27 +2329,30 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
                 case 8:
                     /* 64 bit write access */
                     val = ldq_p(buf);
+                    qemu_io_port_log(true, addr, val);
                     error |= io_mem_write(mr, addr1, val, 8);
                     break;
                 case 4:
                     /* 32 bit write access */
                     val = ldl_p(buf);
+                    qemu_io_port_log(true, addr, val);
                     error |= io_mem_write(mr, addr1, val, 4);
                     break;
                 case 2:
                     /* 16 bit write access */
                     val = lduw_p(buf);
+                    qemu_io_port_log(true, addr, val);
                     error |= io_mem_write(mr, addr1, val, 2);
                     break;
                 case 1:
                     /* 8 bit write access */
                     val = ldub_p(buf);
+                    qemu_io_port_log(true, addr, val);
                     error |= io_mem_write(mr, addr1, val, 1);
                     break;
                 default:
                     abort();
                 }
-                qemu_io_port_log(true, addr, val);
             } else {
                 addr1 += memory_region_get_ram_addr(mr);
                 /* RAM case */
