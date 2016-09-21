@@ -17,7 +17,6 @@
 
 extern FILE *qemu_io_logfile;
 
-void qemu_io_log(const char *fmt, ...);
 void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val);
 void qemu_irq_log(int irq_no, int level);
 void qemu_dma_log(const char *buf);

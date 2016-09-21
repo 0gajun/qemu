@@ -9,7 +9,7 @@
 static char *io_logfilename;
 FILE *qemu_io_logfile;
 
-void qemu_io_log(const char *fmt, ...)
+static void qemu_io_log(const char *fmt, ...)
 {
   va_list ap;
 
@@ -20,7 +20,7 @@ void qemu_io_log(const char *fmt, ...)
   va_end(ap);
 }
 
-static void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
+static inline void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
 {
   int cur_len = 1;
   buf[0] = '[';
@@ -63,7 +63,7 @@ static void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
   strncat(buf, "]", len - cur_len);
 }
 
-void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val) {
+inline void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val) {
   if (0x03F0 <= port_addr && port_addr != 0x03F6 && port_addr <= 0x03F7) {
     char status[1024];
     status[0] = '\0';
@@ -74,14 +74,14 @@ void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val) {
   }
 }
 
-void qemu_irq_log(int irq_no, int level)
+inline void qemu_irq_log(int irq_no, int level)
 {
   if (irq_no == QEMU_FDC_IRQ_NO) {
     qemu_io_log("[io] i %d %d\n", irq_no, level);
   }
 }
 
-void qemu_dma_log(const char *buf)
+inline void qemu_dma_log(const char *buf)
 {
   qemu_io_log(buf);
 }
