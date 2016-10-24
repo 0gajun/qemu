@@ -1,4 +1,7 @@
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 #include "config.h"
 #include "exec/memory.h"
 #include "qemu-common.h"
@@ -9,15 +12,42 @@
 static char *io_logfilename;
 FILE *qemu_io_logfile;
 
+#define SOCKET_PATH "/tmp/socket.sock"
+#define BUF_SIZE 4096
+static int sock = -1;
+static struct sockaddr_un sockaddr;
+static char str_buf[BUF_SIZE] = {'\0'};
+
 static void qemu_io_log(const char *fmt, ...)
 {
-  va_list ap;
-
-  va_start(ap, fmt);
-  if (qemu_io_logfile) {
-    vfprintf(qemu_io_logfile, fmt, ap);
+  if (sock < 0) {
+    return;
   }
+
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(str_buf, BUF_SIZE, fmt, ap);
   va_end(ap);
+
+  fprintf(stderr, "> qemu_io_log\n");
+  if (qemu_io_logfile) {
+    fprintf(qemu_io_logfile, "%s", str_buf);
+  }
+  if (write(sock, str_buf, strnlen(str_buf, BUF_SIZE)) < 0) {
+    fprintf(stderr, "hogehoge\n");
+    perror("write");
+    exit(-1);
+  }
+  if (read(sock, str_buf, 10) <= 0) {
+    perror("read");
+    exit(-1);
+  }
+
+  if (strncmp(str_buf, "ACK", 10) == 0) {
+    printf("ACCEPTED! [%u] %s\n", (unsigned int) strnlen(str_buf, 10), str_buf);
+  } else {
+    printf("NOT ACCEPTED... [%u] %s\n", (unsigned int)strnlen(str_buf, 10), str_buf);
+  }
 }
 
 static inline void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
@@ -97,5 +127,22 @@ void qemu_set_io_log_filename(const char *filename)
       perror(io_logfilename);
       _exit(1);
     }
+  }
+
+  sock = socket(AF_UNIX, SOCK_STREAM, 0);
+
+  if (sock < 0) {
+    perror("cannot open socket");
+    _exit(1);
+  }
+
+  memset(&sockaddr, 0, sizeof(struct sockaddr_un));
+  sockaddr.sun_family = AF_UNIX;
+  strcpy(sockaddr.sun_path, SOCKET_PATH);
+
+  if (connect(sock, (struct sockaddr *)&sockaddr, sizeof(struct sockaddr_un)) < 0) {
+    perror("cannot connect to socket");
+    sock = -1;
+    return;
   }
 }
