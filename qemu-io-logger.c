@@ -18,8 +18,68 @@ static int sock = -1;
 static struct sockaddr_un sockaddr;
 static char str_buf[BUF_SIZE] = {'\0'};
 
+static unsigned int log_index = 0;
+
+char *int2binstr(uint32_t val, char *buffer, int buf_size);
+char *int2binstr(uint32_t val, char *buffer, int buf_size)
+{
+  char buf[buf_size];
+  char *hp;
+  uint32_t v = val;
+  int size = 0;
+  int cnt = 0;
+  buf[buf_size - 1] = '\0';
+  for (hp = &buf[buf_size - 2]; hp > buf && cnt < 32; hp--, cnt++) {
+    if (cnt != 0 && cnt % 4 == 0) {
+      *hp-- = ' ';
+    }
+    *hp = (v & 0x1) ? '1' : '0';
+
+    size++;
+    v >>= 1;
+    if (v == 0) {
+      break;
+    }
+  }
+  strncpy(buffer, hp, buf_size);
+  return buffer;
+}
+
+void qemu_nic_log_bin_str(const char *msg, uint32_t val)
+{
+  char buf[BUF_SIZE];
+  int2binstr(val, buf, BUF_SIZE);
+  qemu_nic_log_fmt("%s [%s]", msg, buf);
+}
+
+void qemu_nic_log_fmt(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(str_buf, BUF_SIZE, fmt, ap);
+  va_end(ap);
+  qemu_nic_log(str_buf);
+}
+
+void qemu_nic_log(const char *msg)
+{
+  if (qemu_io_logfile) {
+    fprintf(qemu_io_logfile, "%u: [nic] %s\n", log_index, msg);
+    fflush(qemu_io_logfile);
+  }
+  log_index++;
+}
+
+void qemu_nic_log_line_break(void)
+{
+  if (qemu_io_logfile) {
+    fprintf(qemu_io_logfile, "\n");
+  }
+}
+
 static void qemu_io_log(const char *fmt, ...)
 {
+  return;
   if (sock < 0) {
     return;
   }
@@ -29,7 +89,7 @@ static void qemu_io_log(const char *fmt, ...)
   vsnprintf(str_buf, BUF_SIZE, fmt, ap);
   va_end(ap);
 
-  fprintf(stderr, "> qemu_io_log\n");
+  //fprintf(stderr, "> qemu_io_log\n");
   if (qemu_io_logfile) {
     fprintf(qemu_io_logfile, "%s", str_buf);
   }
@@ -44,9 +104,9 @@ static void qemu_io_log(const char *fmt, ...)
   }
 
   if (strncmp(str_buf, "ACK", 10) == 0) {
-    printf("ACCEPTED! [%u] %s\n", (unsigned int) strnlen(str_buf, 10), str_buf);
+    //printf("ACCEPTED! [%u] %s\n", (unsigned int) strnlen(str_buf, 10), str_buf);
   } else {
-    printf("NOT ACCEPTED... [%u] %s\n", (unsigned int)strnlen(str_buf, 10), str_buf);
+    //printf("NOT ACCEPTED... [%u] %s\n", (unsigned int)strnlen(str_buf, 10), str_buf);
   }
 }
 

@@ -20,6 +20,10 @@ extern FILE *qemu_io_logfile;
 void qemu_io_port_log(bool is_write, hwaddr port_addr, uint64_t val);
 void qemu_irq_log(int irq_no, int level);
 void qemu_dma_log(const char *buf);
+void qemu_nic_log(const char *msg);
+void qemu_nic_log_fmt(const char *msg, ...);
+void qemu_nic_log_bin_str(const char *msg, uint32_t val);
+void qemu_nic_log_line_break(void);
 
 void qemu_set_io_log_filename(const char *filename);
 

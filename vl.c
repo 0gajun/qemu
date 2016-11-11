@@ -2769,6 +2769,8 @@ int main(int argc, char **argv, char **envp)
     FILE *vmstate_dump_file = NULL;
     Error *main_loop_err = NULL;
 
+    qemu_set_io_log_filename("io_log.log");
+
     qemu_init_cpu_loop();
     qemu_mutex_lock_iothread();
 
@@ -3832,7 +3834,6 @@ int main(int argc, char **argv, char **envp)
      * location or level of logging.
      */
 
-    qemu_set_io_log_filename("io_log.log");
     if (log_mask) {
         int mask;
         if (log_file) {
