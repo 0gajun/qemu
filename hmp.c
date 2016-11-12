@@ -28,6 +28,7 @@
 #include "ui/console.h"
 #include "block/qapi.h"
 #include "qemu-io.h"
+#include "qemu/io-logger.h"
 
 #ifdef CONFIG_SPICE
 #include <spice/enums.h>
@@ -40,6 +41,14 @@ static void hmp_handle_error(Monitor *mon, Error **errp)
         monitor_printf(mon, "%s\n", error_get_pretty(*errp));
         error_free(*errp);
     }
+}
+
+void hmp_io_log_checkpoint(Monitor *mon, const QDict *qdict)
+{
+    const char *message = qdict_get_str(qdict, "message");
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "<Checkpoint> %s", message);
+    qemu_nic_simple_log(buf);
 }
 
 void hmp_info_name(Monitor *mon, const QDict *qdict)

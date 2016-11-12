@@ -1175,7 +1175,11 @@ mac_readreg(E1000State *s, int index)
   } else if (index == MANC) {
     qemu_nic_log_fmt("%s (MANC: 0x%x)",__func__, res);
   } else {
-    qemu_nic_log_fmt("%s (%s : 0x%x)",__func__, macreg_names[index], res);
+    if (macreg_names[index]) {
+      qemu_nic_log_fmt("%s (%s : 0x%x)",__func__, macreg_names[index], res);
+    } else {
+      qemu_nic_log_fmt("%s (Unknown-> 0x%x : 0x%x)",__func__, index<<2, res);
+    }
     //qemu_nic_log_fmt("%s (0x%x : 0x%x)",__func__, index<<2, res);
   }
   qemu_nic_log_bin_str("--> " , res);
@@ -1344,7 +1348,6 @@ e1000_mmio_write(void *opaque, hwaddr addr, uint64_t val,
 
     E1000State *s = opaque;
     unsigned int index = (addr & 0x1ffff) >> 2;
-    printf("[MMIO Write] addr: 0x%lx, \tval: 0x%lx\n", addr, val);
 
     if (index < NWRITEOPS && macreg_writeops[index]) {
         //qemu_nic_log_fmt("-> TDT: 0x%x, TCTL: 0x%x", TDT, TCTL);
@@ -1372,7 +1375,6 @@ e1000_mmio_read(void *opaque, hwaddr addr, unsigned size)
     if (index < NREADOPS && macreg_readops[index])
     {
         uint64_t res = macreg_readops[index](s, index);
-        printf("[MMIO Read]  addr: 0x%lx, \tval: 0x%lx\n", addr, res);
         qemu_nic_log_line_break();
         return res;
     }

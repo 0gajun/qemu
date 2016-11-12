@@ -10,6 +10,20 @@ STEXI
 ETEXI
 
     {
+        .name       = "io_log_checkpoint",
+        .args_type  = "message:s",
+        .params     = "message",
+        .help       = "Output checkpoint message to io_log file",
+        .mhandler.cmd = hmp_io_log_checkpoint,
+    },
+
+STEXI
+@item io_log_checkpoint message
+@findex io_log_checkpoint
+output @var{message} to io_log file.
+ETEXI
+
+    {
         .name       = "help|?",
         .args_type  = "name:S?",
         .params     = "[cmd]",

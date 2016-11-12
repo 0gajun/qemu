@@ -1,8 +1,6 @@
 #ifndef QEMU_IO_LOGGER_H
 #define QEMU_IO_LOGGER_H
 
-#include "hw/block/fdc.h"
-
 #define QEMU_FDC_IRQ_NO 6
 
 #define MAIN_STATUS_REGISTER 0x3F4
@@ -24,6 +22,7 @@ void qemu_nic_log(const char *msg);
 void qemu_nic_log_fmt(const char *msg, ...);
 void qemu_nic_log_bin_str(const char *msg, uint32_t val);
 void qemu_nic_log_line_break(void);
+void qemu_nic_simple_log(const char* msg);
 
 void qemu_set_io_log_filename(const char *filename);
 

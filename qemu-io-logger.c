@@ -77,6 +77,14 @@ void qemu_nic_log_line_break(void)
   }
 }
 
+void qemu_nic_simple_log(const char *msg)
+{
+  if (qemu_io_logfile) {
+    fprintf(qemu_io_logfile, "%s\n", msg);
+    fflush(qemu_io_logfile);
+  }
+}
+
 static void qemu_io_log(const char *fmt, ...)
 {
   return;

@@ -19,6 +19,7 @@
 #include "qapi-types.h"
 #include "qapi/qmp/qdict.h"
 
+void hmp_io_log_checkpoint(Monitor *mon, const QDict *qdict);
 void hmp_info_name(Monitor *mon, const QDict *qdict);
 void hmp_info_version(Monitor *mon, const QDict *qdict);
 void hmp_info_kvm(Monitor *mon, const QDict *qdict);
