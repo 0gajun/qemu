@@ -24,6 +24,7 @@
 #include "net/queue.h"
 #include "qemu/queue.h"
 #include "net/net.h"
+#include "qemu/io-logger.h"
 
 /* The delivery handler may only return zero if it will call
  * qemu_net_queue_flush() when it determines that it is once again able
@@ -184,6 +185,7 @@ ssize_t qemu_net_queue_send(NetQueue *queue,
 {
     ssize_t ret;
 
+  qemu_nic_log_fmt("%s:%s", __func__, sender->name);
     if (queue->delivering || !qemu_can_send_packet(sender)) {
         qemu_net_queue_append(queue, sender, flags, data, size, sent_cb);
         return 0;
@@ -196,6 +198,7 @@ ssize_t qemu_net_queue_send(NetQueue *queue,
     }
 
     qemu_net_queue_flush(queue);
+  qemu_nic_log_fmt("%s(End)", __func__);
 
     return ret;
 }

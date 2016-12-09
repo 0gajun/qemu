@@ -361,6 +361,7 @@ set_interrupt_cause(E1000State *s, int index, uint32_t val)
 
             if (mit_delay) {
                 s->mit_timer_on = 1;
+                // 一定時間後に e1000_mit_timer が呼ばれる
                 timer_mod(s->mit_timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) +
                           mit_delay * 256);
             }
@@ -546,12 +547,12 @@ set_eecd(E1000State *s, int index, uint32_t val)
     s->eecd_state.old_eecd = val & (E1000_EECD_SK | E1000_EECD_CS |
             E1000_EECD_DI|E1000_EECD_FWE_MASK|E1000_EECD_REQ);
     if (!(E1000_EECD_CS & val))			// CS inactive; nothing to do
-	return;
+      return;
     if (E1000_EECD_CS & (val ^ oldval)) {	// CS rise edge; reset state
-	s->eecd_state.val_in = 0;
-	s->eecd_state.bitnum_in = 0;
-	s->eecd_state.bitnum_out = 0;
-	s->eecd_state.reading = 0;
+      s->eecd_state.val_in = 0;
+      s->eecd_state.bitnum_in = 0;
+      s->eecd_state.bitnum_out = 0;
+      s->eecd_state.reading = 0;
     }
     if (!(E1000_EECD_SK & (val ^ oldval)))	// no clock edge
         return;
@@ -647,10 +648,12 @@ e1000_send_packet(E1000State *s, const uint8_t *buf, int size)
   qemu_nic_log(__func__);
     NetClientState *nc = qemu_get_queue(s->nic);
     if (s->phy_reg[PHY_CTRL] & MII_CR_LOOPBACK) {
+        qemu_nic_log("Go to loopback");
         nc->info->receive(nc, buf, size);
     } else {
         qemu_send_packet(nc, buf, size);
     }
+  qemu_nic_log_fmt("%s(End)", __func__);
 }
 
 static void
@@ -661,6 +664,7 @@ xmit_seg(E1000State *s)
     unsigned int frames = s->tx.tso_frames, css, sofar, n;
     struct e1000_tx *tp = &s->tx;
 
+    // Transmission offload
     if (tp->tse && tp->cptse) {
         css = tp->ipcss;
         DBGOUT(TXSUM, "frames %d size %d ipcss %d\n",
@@ -725,6 +729,7 @@ process_tx_desc(E1000State *s, struct e1000_tx_desc *dp)
 
     s->mit_ide |= (txd_lower & E1000_TXD_CMD_IDE);
     if (dtype == E1000_TXD_CMD_DEXT) {	// context descriptor
+      qemu_nic_simple_log("\t->Context Descriptor");
         op = le32_to_cpu(xp->cmd_and_length);
         tp->ipcss = xp->lower_setup.ip_fields.ipcss;
         tp->ipcso = xp->lower_setup.ip_fields.ipcso;
@@ -746,12 +751,14 @@ process_tx_desc(E1000State *s, struct e1000_tx_desc *dp)
         return;
     } else if (dtype == (E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D)) {
         // data descriptor
+      qemu_nic_simple_log("\t->Data Descriptor");
         if (tp->size == 0) {
             tp->sum_needed = le32_to_cpu(dp->upper.data) >> 8;
         }
         tp->cptse = ( txd_lower & E1000_TXD_CMD_TSE ) ? 1 : 0;
     } else {
         // legacy descriptor
+      qemu_nic_simple_log("\t->Legacy Descriptor");
         tp->cptse = 0;
     }
 
@@ -766,6 +773,7 @@ process_tx_desc(E1000State *s, struct e1000_tx_desc *dp)
         
     addr = le64_to_cpu(dp->buffer_addr);
     if (tp->tse && tp->cptse) {
+        qemu_nic_simple_log(">>>TSE<<<");
         msh = tp->hdr_len + tp->mss;
         do {
             bytes = split_size;

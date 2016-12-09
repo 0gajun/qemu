@@ -42,6 +42,7 @@
 #include "qapi/opts-visitor.h"
 #include "qapi/dealloc-visitor.h"
 #include "sysemu/sysemu.h"
+#include "qemu/io-logger.h"
 
 /* Net bridge is currently not supported for W32. */
 #if !defined(_WIN32)
@@ -479,6 +480,7 @@ ssize_t qemu_deliver_packet(NetClientState *sender,
                             size_t size,
                             void *opaque)
 {
+    qemu_nic_simple_log(__func__);
     NetClientState *nc = opaque;
     ssize_t ret;
 
@@ -490,6 +492,7 @@ ssize_t qemu_deliver_packet(NetClientState *sender,
         return 0;
     }
 
+    qemu_nic_log_fmt("receiver: %s", nc->name);
     if (flags & QEMU_NET_PACKET_FLAG_RAW && nc->info->receive_raw) {
         ret = nc->info->receive_raw(nc, data, size);
     } else {
