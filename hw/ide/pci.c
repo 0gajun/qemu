@@ -31,6 +31,8 @@
 #include "qemu/error-report.h"
 #include <hw/ide/pci.h>
 
+#include "qemu/io-logger.h"
+
 #define BMDMA_PAGE_SIZE 4096
 
 #define BM_MIGRATION_COMPAT_STATUS_BITS \
@@ -40,6 +42,7 @@
 static void bmdma_start_dma(IDEDMA *dma, IDEState *s,
                             BlockCompletionFunc *dma_cb)
 {
+    qemu_ide_log_fmt("==> %s", __func__);
     BMDMAState *bm = DO_UPCAST(BMDMAState, dma, dma);
 
     bm->dma_cb = dma_cb;
@@ -191,6 +194,8 @@ static void bmdma_reset(IDEDMA *dma)
 {
     BMDMAState *bm = DO_UPCAST(BMDMAState, dma, dma);
 
+    qemu_ide_log_fmt("==> %s", __func__);
+
 #ifdef DEBUG_IDE
     printf("ide: dma_reset\n");
 #endif
@@ -267,6 +272,8 @@ static uint64_t bmdma_addr_read(void *opaque, hwaddr addr,
     uint32_t mask = (1ULL << (width * 8)) - 1;
     uint64_t data;
 
+    qemu_ide_log_fmt("==> %s", __func__);
+
     data = (bm->addr >> (addr * 8)) & mask;
 #ifdef DEBUG_IDE
     printf("%s: 0x%08x\n", __func__, (unsigned)data);
@@ -277,6 +284,8 @@ static uint64_t bmdma_addr_read(void *opaque, hwaddr addr,
 static void bmdma_addr_write(void *opaque, hwaddr addr,
                              uint64_t data, unsigned width)
 {
+
+    qemu_ide_log_fmt("==> %s", __func__);
     BMDMAState *bm = opaque;
     int shift = addr * 8;
     uint32_t mask = (1ULL << (width * 8)) - 1;

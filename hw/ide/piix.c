@@ -33,10 +33,14 @@
 
 #include <hw/ide/pci.h>
 
+#include "qemu/io-logger.h"
+
 static uint64_t bmdma_read(void *opaque, hwaddr addr, unsigned size)
 {
     BMDMAState *bm = opaque;
     uint32_t val;
+
+    qemu_ide_log_fmt("==> %s", __func__);
 
     if (size != 1) {
         return ((uint64_t)1 << (size * 8)) - 1;
@@ -45,14 +49,18 @@ static uint64_t bmdma_read(void *opaque, hwaddr addr, unsigned size)
     switch(addr & 3) {
     case 0:
         val = bm->cmd;
+        qemu_ide_log_fmt("  |--> cmd val:0x%x", val);
         break;
     case 2:
         val = bm->status;
+        qemu_ide_log_fmt("  |--> status val:0x%x", val);
         break;
     default:
         val = 0xff;
+        qemu_ide_log_fmt("  |--> default val:0x%x", val);
         break;
     }
+
 #ifdef DEBUG_IDE
     printf("bmdma: readb 0x%02x : 0x%02x\n", (uint8_t)addr, val);
 #endif
@@ -62,6 +70,8 @@ static uint64_t bmdma_read(void *opaque, hwaddr addr, unsigned size)
 static void bmdma_write(void *opaque, hwaddr addr,
                         uint64_t val, unsigned size)
 {
+
+    qemu_ide_log_fmt("==> %s(addr: 0x%x, val: 0x%x", __func__, addr, val);
     BMDMAState *bm = opaque;
 
     if (size != 1) {
@@ -73,9 +83,11 @@ static void bmdma_write(void *opaque, hwaddr addr,
 #endif
     switch(addr & 3) {
     case 0:
+        qemu_ide_log_fmt("  |--> cmd_write");
         bmdma_cmd_writeb(bm, val);
         break;
     case 2:
+        qemu_ide_log_fmt("  |--> write status");
         bm->status = (val & 0x60) | (bm->status & 1) | (bm->status & ~val & 0x06);
         break;
     }

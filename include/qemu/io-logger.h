@@ -23,6 +23,8 @@ void qemu_nic_log_fmt(const char *msg, ...);
 void qemu_nic_log_bin_str(const char *msg, uint32_t val);
 void qemu_nic_log_line_break(void);
 void qemu_nic_simple_log(const char* msg);
+void qemu_ide_log(const char *msg);
+void qemu_ide_log_fmt(const char *fmt, ...);
 
 void qemu_set_io_log_filename(const char *filename);
 

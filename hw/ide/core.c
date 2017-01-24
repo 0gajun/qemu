@@ -32,8 +32,10 @@
 #include "sysemu/dma.h"
 #include "hw/block/block.h"
 #include "sysemu/block-backend.h"
+#include "qemu/io-logger.h"
 
 #include <hw/ide/internal.h>
+
 
 /* These values were based on a Seagate ST3500418AS but have been modified
    to make more sense in QEMU */
@@ -1057,6 +1059,7 @@ static void ide_clear_hob(IDEBus *bus)
 void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 {
     IDEBus *bus = opaque;
+    const char *reg;
 
 #ifdef DEBUG_IDE
     printf("IDE: write addr=0x%x val=0x%02x\n", addr, val);
@@ -1070,8 +1073,10 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
 
     switch(addr) {
     case 0:
+        reg = "Data";
         break;
     case 1:
+        reg = "Features";
 	ide_clear_hob(bus);
         /* NOTE: data is written to the two drives */
 	bus->ifs[0].hob_feature = bus->ifs[0].feature;
@@ -1080,6 +1085,7 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         bus->ifs[1].feature = val;
         break;
     case 2:
+        reg = "Sector count";
 	ide_clear_hob(bus);
 	bus->ifs[0].hob_nsector = bus->ifs[0].nsector;
 	bus->ifs[1].hob_nsector = bus->ifs[1].nsector;
@@ -1087,6 +1093,7 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         bus->ifs[1].nsector = val;
         break;
     case 3:
+        reg = "Sector number";
 	ide_clear_hob(bus);
 	bus->ifs[0].hob_sector = bus->ifs[0].sector;
 	bus->ifs[1].hob_sector = bus->ifs[1].sector;
@@ -1094,6 +1101,7 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         bus->ifs[1].sector = val;
         break;
     case 4:
+        reg = "Cylinder low";
 	ide_clear_hob(bus);
 	bus->ifs[0].hob_lcyl = bus->ifs[0].lcyl;
 	bus->ifs[1].hob_lcyl = bus->ifs[1].lcyl;
@@ -1101,6 +1109,7 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         bus->ifs[1].lcyl = val;
         break;
     case 5:
+        reg = "Cylinder high";
 	ide_clear_hob(bus);
 	bus->ifs[0].hob_hcyl = bus->ifs[0].hcyl;
 	bus->ifs[1].hob_hcyl = bus->ifs[1].hcyl;
@@ -1108,6 +1117,7 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         bus->ifs[1].hcyl = val;
         break;
     case 6:
+        reg = "Drive/head";
 	/* FIXME: HOB readback uses bit 7 */
         bus->ifs[0].select = (val & ~0x10) | 0xa0;
         bus->ifs[1].select = (val | 0x10) | 0xa0;
@@ -1116,10 +1126,15 @@ void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val)
         break;
     default:
     case 7:
+        reg = "Command";
+        qemu_ide_log_fmt("==> %s(addr: 0x%x{%s}, val: 0x%x", __func__, addr, reg, val);
         /* command */
         ide_exec_cmd(bus, val);
-        break;
+        return;
+        // break;
     }
+
+    qemu_ide_log_fmt("==> %s(addr: 0x%x{%s}, val: 0x%x", __func__, addr, reg, val);
 }
 
 static bool cmd_nop(IDEState *s, uint8_t cmd)
@@ -1459,6 +1474,8 @@ static bool cmd_packet(IDEState *s, uint8_t cmd)
         ide_abort_command(s);
         return true;
     }
+
+    qemu_ide_log_fmt("  |--> [PACKET Command]");
 
     s->status = READY_STAT | SEEK_STAT;
     s->atapi_dma = s->feature & 1;
@@ -1804,6 +1821,68 @@ static const struct {
     [WIN_READ_NATIVE_MAX]         = { cmd_read_native_max, ALL_OK | SET_DSC },
 };
 
+#define OGA_CMD_NAME(name) [name] = #name
+
+static const char* ide_cmd_name_table[0x100] =
+{
+    OGA_CMD_NAME(CFA_REQ_EXT_ERROR_CODE),
+    OGA_CMD_NAME(WIN_DSM),
+    OGA_CMD_NAME(WIN_DEVICE_RESET),
+    OGA_CMD_NAME(WIN_RECAL),
+    OGA_CMD_NAME(WIN_READ),
+    OGA_CMD_NAME(WIN_READ_ONCE),
+    OGA_CMD_NAME(WIN_READ_EXT),
+    OGA_CMD_NAME(WIN_READDMA_EXT),
+    OGA_CMD_NAME(WIN_READ_NATIVE_MAX_EXT),
+    OGA_CMD_NAME(WIN_MULTREAD_EXT),
+    OGA_CMD_NAME(WIN_WRITE),
+    OGA_CMD_NAME(WIN_WRITE_ONCE),
+    OGA_CMD_NAME(WIN_WRITE_EXT),
+    OGA_CMD_NAME(WIN_WRITEDMA_EXT),
+    OGA_CMD_NAME(CFA_WRITE_SECT_WO_ERASE),
+    OGA_CMD_NAME(WIN_MULTWRITE_EXT),
+    OGA_CMD_NAME(WIN_WRITE_VERIFY),
+    OGA_CMD_NAME(WIN_VERIFY),
+    OGA_CMD_NAME(WIN_VERIFY_ONCE),
+    OGA_CMD_NAME(WIN_VERIFY_EXT),
+    OGA_CMD_NAME(WIN_SEEK),
+    OGA_CMD_NAME(CFA_TRANSLATE_SECTOR),
+    OGA_CMD_NAME(WIN_DIAGNOSE),
+    OGA_CMD_NAME(WIN_SPECIFY),
+    OGA_CMD_NAME(WIN_STANDBYNOW2),
+    OGA_CMD_NAME(WIN_IDLEIMMEDIATE2),
+    OGA_CMD_NAME(WIN_STANDBY2),
+    OGA_CMD_NAME(WIN_SETIDLE2),
+    OGA_CMD_NAME(WIN_CHECKPOWERMODE2),
+    OGA_CMD_NAME(WIN_SLEEPNOW2),
+    OGA_CMD_NAME(WIN_PACKETCMD),
+    OGA_CMD_NAME(WIN_PIDENTIFY),
+    OGA_CMD_NAME(WIN_SMART),
+    OGA_CMD_NAME(CFA_ACCESS_METADATA_STORAGE),
+    OGA_CMD_NAME(CFA_ERASE_SECTORS),
+    OGA_CMD_NAME(WIN_MULTREAD),
+    OGA_CMD_NAME(WIN_MULTWRITE),
+    OGA_CMD_NAME(WIN_SETMULT),
+    OGA_CMD_NAME(WIN_READDMA),
+    OGA_CMD_NAME(WIN_READDMA_ONCE),
+    OGA_CMD_NAME(WIN_WRITEDMA),
+    OGA_CMD_NAME(WIN_WRITEDMA_ONCE),
+    OGA_CMD_NAME(CFA_WRITE_MULTI_WO_ERASE),
+    OGA_CMD_NAME(WIN_STANDBYNOW1),
+    OGA_CMD_NAME(WIN_IDLEIMMEDIATE),
+    OGA_CMD_NAME(WIN_STANDBY),
+    OGA_CMD_NAME(WIN_SETIDLE1),
+    OGA_CMD_NAME(WIN_CHECKPOWERMODE1),
+    OGA_CMD_NAME(WIN_SLEEPNOW1),
+    OGA_CMD_NAME(WIN_FLUSH_CACHE),
+    OGA_CMD_NAME(WIN_FLUSH_CACHE_EXT),
+    OGA_CMD_NAME(WIN_IDENTIFY),
+    OGA_CMD_NAME(WIN_SETFEATURES),
+    OGA_CMD_NAME(IBM_SENSE_CONDITION),
+    OGA_CMD_NAME(CFA_WEAR_LEVEL),
+    OGA_CMD_NAME(WIN_READ_NATIVE_MAX),
+};
+
 static bool ide_cmd_permitted(IDEState *s, uint32_t cmd)
 {
     return cmd < ARRAY_SIZE(ide_cmd_table)
@@ -1814,6 +1893,7 @@ void ide_exec_cmd(IDEBus *bus, uint32_t val)
 {
     IDEState *s;
     bool complete;
+    qemu_ide_log_fmt("  |--> %s, %s\n", __func__, ide_cmd_name_table[val]);
 
 #if defined(DEBUG_IDE)
     printf("ide: CMD=%02x\n", val);
@@ -1821,14 +1901,18 @@ void ide_exec_cmd(IDEBus *bus, uint32_t val)
     s = idebus_active_if(bus);
     /* ignore commands to non existent slave */
     if (s != bus->ifs && !s->blk) {
+        qemu_ide_log_fmt("  |--> (Skipped at first condition)");
         return;
     }
 
     /* Only DEVICE RESET is allowed while BSY or/and DRQ are set */
-    if ((s->status & (BUSY_STAT|DRQ_STAT)) && val != WIN_DEVICE_RESET)
+    if ((s->status & (BUSY_STAT|DRQ_STAT)) && val != WIN_DEVICE_RESET) {
+        qemu_ide_log_fmt("  |--> (Skipped at second condition)");
         return;
+    }
 
     if (!ide_cmd_permitted(s, val)) {
+        qemu_ide_log_fmt("  |--> (Skipped at third condition)");
         ide_abort_command(s);
         ide_set_irq(s->bus);
         return;
@@ -1859,6 +1943,8 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
     uint32_t addr;
     int ret, hob;
 
+    const char *reg;
+
     addr = addr1 & 7;
     /* FIXME: HOB readback uses bit 7, but it's always set right now */
     //hob = s->select & (1 << 7);
@@ -1866,8 +1952,10 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
     switch(addr) {
     case 0:
         ret = 0xff;
+        reg = "Data";
         break;
     case 1:
+        reg = "Error register";
         if ((!bus->ifs[0].blk && !bus->ifs[1].blk) ||
             (s != bus->ifs && !s->blk)) {
             ret = 0;
@@ -1878,6 +1966,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         }
         break;
     case 2:
+        reg = "Sector count";
         if (!bus->ifs[0].blk && !bus->ifs[1].blk) {
             ret = 0;
         } else if (!hob) {
@@ -1887,6 +1976,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         }
         break;
     case 3:
+        reg = "Sector number";
         if (!bus->ifs[0].blk && !bus->ifs[1].blk) {
             ret = 0;
         } else if (!hob) {
@@ -1896,6 +1986,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         }
         break;
     case 4:
+        reg = "Cylinder low";
         if (!bus->ifs[0].blk && !bus->ifs[1].blk) {
             ret = 0;
         } else if (!hob) {
@@ -1905,6 +1996,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         }
         break;
     case 5:
+        reg = "Cylinder high";
         if (!bus->ifs[0].blk && !bus->ifs[1].blk) {
             ret = 0;
         } else if (!hob) {
@@ -1914,6 +2006,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         }
         break;
     case 6:
+        reg = "Drive/head";
         if (!bus->ifs[0].blk && !bus->ifs[1].blk) {
             ret = 0;
         } else {
@@ -1922,6 +2015,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
         break;
     default:
     case 7:
+        reg = "Status";
         if ((!bus->ifs[0].blk && !bus->ifs[1].blk) ||
             (s != bus->ifs && !s->blk)) {
             ret = 0;
@@ -1934,6 +2028,7 @@ uint32_t ide_ioport_read(void *opaque, uint32_t addr1)
 #ifdef DEBUG_IDE
     printf("ide: read addr=0x%x val=%02x\n", addr1, ret);
 #endif
+    qemu_ide_log_fmt("==> %s (addr: 0x%x{%s}, val: 0x%x", __func__, addr, reg, ret);
     return ret;
 }
 
@@ -1949,6 +2044,7 @@ uint32_t ide_status_read(void *opaque, uint32_t addr)
     } else {
         ret = s->status;
     }
+    qemu_ide_log_fmt("==> %s(val: 0x%x", __func__, ret);
 #ifdef DEBUG_IDE
     printf("ide: read status addr=0x%x val=%02x\n", addr, ret);
 #endif
@@ -1960,6 +2056,8 @@ void ide_cmd_write(void *opaque, uint32_t addr, uint32_t val)
     IDEBus *bus = opaque;
     IDEState *s;
     int i;
+
+    qemu_ide_log_fmt("==> %s(val: 0x%x)", __func__, val);
 
 #ifdef DEBUG_IDE
     printf("ide: write control addr=0x%x val=%02x\n", addr, val);
@@ -2014,6 +2112,8 @@ void ide_data_writew(void *opaque, uint32_t addr, uint32_t val)
     IDEState *s = idebus_active_if(bus);
     uint8_t *p;
 
+    qemu_ide_log_fmt("==> %s", __func__);
+
     /* PIO data access allowed only when DRQ bit is set. The result of a write
      * during PIO out is indeterminate, just ignore it. */
     if (!(s->status & DRQ_STAT) || ide_is_pio_out(s)) {
@@ -2034,6 +2134,8 @@ uint32_t ide_data_readw(void *opaque, uint32_t addr)
     IDEState *s = idebus_active_if(bus);
     uint8_t *p;
     int ret;
+
+    qemu_ide_log_fmt("==> %s", __func__);
 
     /* PIO data access allowed only when DRQ bit is set. The result of a read
      * during PIO in is indeterminate, return 0 and don't move forward. */
@@ -2056,6 +2158,8 @@ void ide_data_writel(void *opaque, uint32_t addr, uint32_t val)
     IDEState *s = idebus_active_if(bus);
     uint8_t *p;
 
+    qemu_ide_log_fmt("==> %s", __func__);
+
     /* PIO data access allowed only when DRQ bit is set. The result of a write
      * during PIO out is indeterminate, just ignore it. */
     if (!(s->status & DRQ_STAT) || ide_is_pio_out(s)) {
@@ -2076,6 +2180,8 @@ uint32_t ide_data_readl(void *opaque, uint32_t addr)
     IDEState *s = idebus_active_if(bus);
     uint8_t *p;
     int ret;
+
+    qemu_ide_log_fmt("==> %s", __func__);
 
     /* PIO data access allowed only when DRQ bit is set. The result of a read
      * during PIO in is indeterminate, return 0 and don't move forward. */

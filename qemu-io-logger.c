@@ -9,6 +9,9 @@
 #include "qemu/io-logger.h"
 #include "exec/address-spaces.h"
 
+//#define LOGGING_NIC 1
+#define LOGGING_IDE 1
+
 static char *io_logfilename;
 FILE *qemu_io_logfile;
 
@@ -19,6 +22,8 @@ static struct sockaddr_un sockaddr;
 static char str_buf[BUF_SIZE] = {'\0'};
 
 static unsigned int log_index = 0;
+static unsigned int nic_log_index = 0;
+static unsigned int ide_log_index = 0;
 
 char *int2binstr(uint32_t val, char *buffer, int buf_size);
 char *int2binstr(uint32_t val, char *buffer, int buf_size)
@@ -45,6 +50,17 @@ char *int2binstr(uint32_t val, char *buffer, int buf_size)
   return buffer;
 }
 
+static void nic_log(const char *msg)
+{
+#ifdef LOGGING_NIC
+  if (qemu_io_logfile) {
+    fprintf(qemu_io_logfile, "%u: [nic] %s\n", nic_log_index, msg);
+    fflush(qemu_io_logfile);
+  }
+#endif
+  nic_log_index++;
+}
+
 void qemu_nic_log_bin_str(const char *msg, uint32_t val)
 {
   char buf[BUF_SIZE];
@@ -58,31 +74,50 @@ void qemu_nic_log_fmt(const char *fmt, ...)
   va_start(ap, fmt);
   vsnprintf(str_buf, BUF_SIZE, fmt, ap);
   va_end(ap);
-  qemu_nic_log(str_buf);
+  nic_log(str_buf);
 }
 
 void qemu_nic_log(const char *msg)
 {
-  if (qemu_io_logfile) {
-    fprintf(qemu_io_logfile, "%u: [nic] %s\n", log_index, msg);
-    fflush(qemu_io_logfile);
-  }
-  log_index++;
+  nic_log(msg);
 }
 
 void qemu_nic_log_line_break(void)
 {
-  if (qemu_io_logfile) {
-    fprintf(qemu_io_logfile, "\n");
-  }
+  nic_log("\n");
 }
 
 void qemu_nic_simple_log(const char *msg)
 {
+  char buf[BUF_SIZE];
+  snprintf(buf, BUF_SIZE, "%s\n", msg);
+  nic_log(buf);
+}
+
+static void ide_log(const char *msg)
+{
+#ifdef LOGGING_IDE
   if (qemu_io_logfile) {
-    fprintf(qemu_io_logfile, "%s\n", msg);
+    fprintf(qemu_io_logfile, "%u:  [ide] %s\n", ide_log_index, msg);
     fflush(qemu_io_logfile);
   }
+  ide_log_index++;
+#endif
+}
+
+void qemu_ide_log(const char *msg)
+{
+  ide_log(msg);
+}
+
+void qemu_ide_log_fmt(const char *fmt, ...)
+{
+  char buf[BUF_SIZE];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, BUF_SIZE, fmt, ap);
+  va_end(ap);
+  ide_log(buf);
 }
 
 static void qemu_io_log(const char *fmt, ...)
@@ -116,6 +151,7 @@ static void qemu_io_log(const char *fmt, ...)
   } else {
     //printf("NOT ACCEPTED... [%u] %s\n", (unsigned int)strnlen(str_buf, 10), str_buf);
   }
+  log_index++;
 }
 
 static inline void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned int len)
@@ -149,7 +185,7 @@ static inline void qemu_log_parse_msr_value(uint64_t msr, char *buf, unsigned in
   if (msr & MSR_DRV1_BSY) {
     strncat(buf, "DRV1_BSY ", len - cur_len);
     cur_len += 9;
-  }
+                  }
   if (msr & MSR_DRV2_BSY) {
     strncat(buf, "DRV2_BSY ", len - cur_len);
     cur_len += 9;

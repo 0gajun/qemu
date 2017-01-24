@@ -1195,9 +1195,34 @@ static const struct {
     /* [1] handler detects and reports not ready condition itself */
 };
 
+static const char *cmd_name_tbl[] = {
+    [ 0x00 ] = "cmd_test_unit_ready",
+    [ 0x03 ] = "cmd_request_sense",
+    [ 0x12 ] = "cmd_inquiry",
+    [ 0x1b ] = "cmd_start_stop_unit",
+    [ 0x1e ] = "cmd_prevent_allow_medium_removal",
+    [ 0x25 ] = "cmd_read_cdvd_capacity",
+    [ 0x28 ] = "cmd_read",
+    [ 0x2b ] = "cmd_seek",
+    [ 0x43 ] = "cmd_read_toc_pma_atip",
+    [ 0x46 ] = "cmd_get_configuration",
+    [ 0x4a ] = "cmd_get_event_status_notification",
+    [ 0x51 ] = "cmd_read_disc_information",
+    [ 0x5a ] = "cmd_mode_sense",
+    [ 0xa8 ] = "cmd_read",
+    [ 0xad ] = "cmd_read_dvd_structure",
+    [ 0xbb ] = "cmd_set_speed",
+    [ 0xbd ] = "cmd_mechanism_status",
+    [ 0xbe ] = "cmd_read_cd",
+    /* [1] handler detects and reports not ready condition itself */
+};
+
+#include "qemu/io-logger.h"
+
 void ide_atapi_cmd(IDEState *s)
 {
     uint8_t *buf;
+    qemu_ide_log_fmt("  |--> ide_atapi_cmd(%s)", cmd_name_tbl[s->io_buffer[0]]);
 
     buf = s->io_buffer;
 #ifdef DEBUG_IDE_ATAPI
